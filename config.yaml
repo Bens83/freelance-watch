@@ -1,0 +1,114 @@
+# ============================================================================
+# Configuration de freelance-watch — à adapter à votre profil
+# ============================================================================
+
+# Décrit ce que vous cherchez. L'IA s'en sert pour noter chaque annonce (0-100).
+# Plus c'est précis (outils, séniorité, remote, TJM), meilleur est le tri.
+profile: |
+  Freelance en email marketing, spécialisé dans :
+  - l'intégration HTML d'emails (responsive, compatibilité Outlook/Gmail, MJML)
+  - l'intégration de newsletters et de templates dans des outils d'emailing
+    (Brevo, Mailchimp, Klaviyo, Salesforce Marketing Cloud, Braze, Sendinblue...)
+  Cherche des missions freelance, de préférence en remote ou en France.
+  Pas intéressé par : CDI, stage, alternance, missions sans rapport avec l'email.
+
+# ----------------------------------------------------------------------------
+# Sources
+# ----------------------------------------------------------------------------
+sources:
+  serp:
+    # "qdr:d" = 24 h, "qdr:w" = 7 jours, "qdr:m" = 1 mois (le dédoublonnage évite les doublons)
+    period: "qdr:w"
+    results_per_query: 10
+    # Chaque requête = 1 crédit Serper à chaque exécution. Gardez la liste courte.
+    queries:
+      # --- Posts LinkedIn publics ---
+      - 'site:linkedin.com/posts freelance "intégrateur email"'
+      - 'site:linkedin.com/posts "recherche" freelance emailing'
+      - 'site:linkedin.com/posts "cherche" freelance "email marketing"'
+      - 'site:linkedin.com/posts freelance newsletter intégration HTML'
+      - 'site:linkedin.com/posts freelance (Brevo OR Klaviyo OR Mailchimp OR "Salesforce Marketing Cloud")'
+      # --- Autres sites (hors LinkedIn) ---
+      - '"mission freelance" ("intégrateur email" OR "intégrateur emailing" OR "email marketing") -site:linkedin.com'
+
+  # Flux RSS optionnels (une URL par ligne). Exemple :
+  # rss:
+  #   - https://exemple.com/flux-missions.xml
+  rss: []
+
+# ----------------------------------------------------------------------------
+# Filtre gratuit avant l'IA : il faut AU MOINS UN mot de "topics" ET UN de "intent".
+# Les mots sont insensibles à la casse et aux accents ; "email" matche aussi "emailing".
+# ----------------------------------------------------------------------------
+filters:
+  topics:
+    - email
+    - e-mail
+    - emailing
+    - newsletter
+    - html
+    - html email
+    - intégration email
+    - email responsive
+    - brevo
+    - sendinblue
+    - mailchimp
+    - klaviyo
+    - braze
+    - salesforce marketing cloud
+    - sfmc
+    - crm
+    - CRM Manager
+    - Email Marketing Manager
+    - CRM Specialist
+    - CRM Specialiste
+    - Intégrateur HTML
+    - Email Developer
+    - Responsable CRM
+    - template HTML
+    - template newsletter
+  intent:
+    - freelance
+    - free-lance
+    - indépendant
+    - prestataire
+    - mission
+    - renfort CRM
+    - mission CRM
+    - surcharge CRM
+    - recherche freelance
+    - besoin freelance
+    - consultant
+    - renfort
+    - recherche
+    - cherche
+    - besoin
+    - recrute
+    - tjm
+  # Mots entiers qui éliminent directement le résultat (économise des appels IA)
+  exclude:
+    - alternance
+    - alternant
+    - stagiaire
+    - stage
+    - cdi
+    - cdd
+
+# ----------------------------------------------------------------------------
+# IA de tri (Claude). Coût très faible : seuls les résultats filtrés sont envoyés.
+# ----------------------------------------------------------------------------
+llm:
+  model: claude-haiku-5-5     # surchargeable avec la variable CLAUDE_MODEL
+  min_relevance: 50           # sous ce score (0-100), pas d'alerte
+  max_calls_per_run: 30       # garde-fou de coût
+ 
+# ----------------------------------------------------------------------------
+# Notifications
+# ----------------------------------------------------------------------------
+notifications:
+  max_ntfy_per_run: 8         # au-delà, une seule notification récapitulative
+  email:
+    mode: instant             # "instant" : un email groupé par exécution s'il y a du nouveau
+                              # "daily"   : un seul digest par jour
+    digest_hour: 8            # (mode daily) heure de Paris à partir de laquelle envoyer
+ 

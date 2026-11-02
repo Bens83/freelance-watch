@@ -1,0 +1,5 @@
+requests>=2.31
+pyyaml>=6.0
+anthropic>=0.40
+feedparser>=6.0
+python-dotenv>=1.0
