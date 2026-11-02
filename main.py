@@ -6,9 +6,9 @@ Flux : collecte (recherche web + RSS) -> dédoublonnage -> filtre mots-clés
        -> classification IA -> alerte ntfy (instantanée) + email (groupé ou digest).
 
 Usage :
-    python main.py              # exécution normale
-    python main.py --dry-run    # affiche au lieu d'envoyer, ne modifie pas l'état
-    python main.py --test       # envoie une notification de test (ntfy + email)
+    python main.py             # exécution normale
+    python main.py --dry-run   # affiche au lieu d'envoyer, ne modifie pas l'état
+    python main.py --test      # envoie une notification de test (ntfy + email)
 """
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def load_state() -> dict:
         try:
             state.update(json.loads(STATE_PATH.read_text(encoding="utf-8")))
         except json.JSONDecodeError:
-            log("⚠️  state/seen.json illisible, on repart de zéro")
+            log("⚠️ state/seen.json illisible, on repart de zéro")
     return state
 
 
@@ -106,7 +106,7 @@ def collect_serp(cfg: dict) -> list[dict]:
         return []
     key = os.environ.get("SERPER_API_KEY")
     if not key:
-        log("⚠️  SERPER_API_KEY manquante : source recherche web ignorée")
+        log("⚠️ SERPER_API_KEY manquante : source recherche web ignorée")
         return []
 
     items = []
@@ -129,14 +129,14 @@ def collect_serp(cfg: dict) -> list[dict]:
                     timeout=30,
                 )
             except requests.RequestException as e:
-                log(f"⚠️  Requête échouée ({q[:50]}…) : {e}")
+                log(f"⚠️ Requête échouée ({q[:50]}…) : {e}")
                 break
             if r.status_code == 200:
                 data = r.json()
                 if len(payload) < len(attempts[0]):
-                    log(f"ℹ️  Requête acceptée avec les paramètres : {sorted(payload)}")
+                    log(f"ℹ️ Requête acceptée avec les paramètres : {sorted(payload)}")
                 break
-            log(f"⚠️  Serper {r.status_code} avec {sorted(payload)} : {r.text[:300]}")
+            log(f"⚠️ Serper {r.status_code} avec {sorted(payload)} : {r.text[:300]}")
             if r.status_code in (401, 402, 403, 429):
                 break  # clé invalide, crédits épuisés ou quota : inutile de réessayer
         if data is None:
@@ -170,7 +170,7 @@ def collect_rss(cfg: dict) -> list[dict]:
         try:
             d = feedparser.parse(url)
         except Exception as e:  # noqa: BLE001
-            log(f"⚠️  Flux RSS en échec ({url}) : {e}")
+            log(f"⚠️ Flux RSS en échec ({url}) : {e}")
             continue
         for e in d.entries[:50]:
             text = re.sub(r"<[^>]+>", " ", e.get("summary", ""))
@@ -236,7 +236,7 @@ def classify(client, model: str, profile: str, item: dict) -> dict | None:
         raw = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
         data = json.loads(re.search(r"\{.*\}", raw, re.S).group(0))
     except Exception as e:  # noqa: BLE001
-        log(f"⚠️  Classification échouée ({item['url'][:60]}…) : {e}")
+        log(f"⚠️ Classification échouée ({item['url'][:60]}…) : {e}")
         return None
     try:
         data["relevance"] = int(data.get("relevance", 0))
@@ -252,7 +252,7 @@ def classify(client, model: str, profile: str, item: dict) -> dict | None:
 def ntfy_send(payload: dict) -> bool:
     topic = os.environ.get("NTFY_TOPIC")
     if not topic:
-        log("⚠️  NTFY_TOPIC manquant : notification ntfy ignorée")
+        log("⚠️ NTFY_TOPIC manquant : notification ntfy ignorée")
         return False
     server = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
     headers = {}
@@ -266,7 +266,7 @@ def ntfy_send(payload: dict) -> bool:
         r.raise_for_status()
         return True
     except requests.RequestException as e:
-        log(f"⚠️  ntfy en échec : {e}")
+        log(f"⚠️ ntfy en échec : {e}")
         return False
 
 
@@ -318,7 +318,7 @@ def render_email(matches: list[dict]) -> tuple[str, str]:
 
 def send_email(matches: list[dict], subject: str | None = None) -> bool:
     if not smtp_configured():
-        log("⚠️  SMTP non configuré : email ignoré")
+        log("⚠️ SMTP non configuré : email ignoré")
         return False
     txt, body_html = render_email(matches)
     msg = EmailMessage()
@@ -330,7 +330,7 @@ def send_email(matches: list[dict], subject: str | None = None) -> bool:
     if DRY_RUN:
         log(f"[dry-run] email → {msg['To']} : {msg['Subject']}")
         return True
-    host, port = os.environ["SMTP_HOST"], int(os.environ.get("SMTP_PORT", "587"))
+    host, port = os.environ["SMTP_HOST"], int(os.environ.get("SMTP_PORT") or "587")
     try:
         if port == 465:
             with smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30) as s:
@@ -343,7 +343,7 @@ def send_email(matches: list[dict], subject: str | None = None) -> bool:
                 s.send_message(msg)
         return True
     except (smtplib.SMTPException, OSError) as e:
-        log(f"⚠️  Envoi email en échec : {e}")
+        log(f"⚠️ Envoi email en échec : {e}")
         return False
 
 
@@ -405,7 +405,8 @@ def main() -> None:
 
         client = anthropic.Anthropic()
     else:
-        log("⚠️  ANTHROPIC_API_KEY manquante : pas de tri IA, tous les candidats sont envoyés")
+        log("⚠️ ANTHROPIC_API_KEY manquante : pas de tri IA, tous les candidats sont envoyés")
+
     model = os.environ.get("CLAUDE_MODEL") or (cfg.get("llm") or {}).get("model", "claude-haiku-5-5")
     max_calls = (cfg.get("llm") or {}).get("max_calls_per_run", 30)
     min_score = (cfg.get("llm") or {}).get("min_relevance", 50)
@@ -421,15 +422,17 @@ def main() -> None:
             calls += 1
             if info is None:
                 continue
-            state["seen"][it["id"]] = today
             if not (info["is_freelance_request"] and info["relevance"] >= min_score):
+                state["seen"][it["id"]] = today  # écarté : inutile de le retraiter
                 log(f"  ✗ {it['title'][:60]} (score {info['relevance']})")
                 continue
         else:
             info = {"summary": it["text"][:140], "relevance": None, "buyer_type": "inconnu"}
-            state["seen"][it["id"]] = today
+        # NB : une mission retenue n'est PAS marquée « vue » ici.
+        # Elle ne l'est qu'après une notification réussie (voir étape 5).
         matches.append(
             {
+                "id": it["id"],
                 "title": it["title"],
                 "url": it["url"],
                 "source": it["source"],
@@ -447,29 +450,49 @@ def main() -> None:
     # 4. ntfy : une notification par mission (plafonnée pour éviter le flood)
     max_push = ncfg.get("max_ntfy_per_run", 8)
     ranked = sorted(matches, key=lambda m: m.get("relevance") or 0, reverse=True)
+    ntfy_ok: set[str] = set()
     for m in ranked[:max_push]:
-        ntfy_match(m)
+        if ntfy_match(m):
+            ntfy_ok.add(m["id"])
     if len(ranked) > max_push:
-        ntfy_send(
+        overflow_ok = ntfy_send(
             {
                 "title": f"+{len(ranked) - max_push} autres missions",
                 "message": "Voir l'email pour la liste complète.",
                 "priority": 3,
             }
         )
+        if overflow_ok:
+            ntfy_ok.update(m["id"] for m in ranked[max_push:])
 
     # 5. Email : groupé à chaque run ("instant") ou digest quotidien ("daily")
-    state["pending"].extend(matches)
     ecfg = ncfg.get("email") or {}
     mode = ecfg.get("mode", "instant")
     now = datetime.now(TZ)
+    pending_ids = {p.get("id") for p in state["pending"] if p.get("id")}
+    state["pending"].extend(m for m in matches if m["id"] not in pending_ids)
     due = bool(state["pending"]) and (
         mode == "instant"
         or (now.hour >= ecfg.get("digest_hour", 8) and state["last_digest"] != today)
     )
+    email_sent = False
     if due and send_email(state["pending"]):
         state["pending"] = []
         state["last_digest"] = today
+        email_sent = True
+    queued_for_digest = mode == "daily" and smtp_configured()
+
+    # 6. Marquage « vu » : seulement si au moins un canal a pris en charge la mission.
+    #    Sinon elle reste non vue et sera retentée au prochain run.
+    failed = set()
+    for m in matches:
+        if m["id"] in ntfy_ok or email_sent or queued_for_digest:
+            state["seen"][m["id"]] = today
+        else:
+            failed.add(m["id"])
+    if failed:
+        log(f"⚠️ {len(failed)} mission(s) non notifiée(s) : retentées au prochain run")
+        state["pending"] = [p for p in state["pending"] if p.get("id") not in failed]
 
     if DRY_RUN:
         log("Mode dry-run : état non sauvegardé")
