@@ -2,12 +2,16 @@ name: freelance-watch
 
 on:
   schedule:
-    # Toutes les 2 h entre 05:17 et 19:17 UTC (≈ 7 h-21 h à Paris). À ajuster.
     - cron: "17 5-19/2 * * *"
-  workflow_dispatch:   # lancement manuel depuis l'onglet Actions
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Envoyer une notification de test (ntfy + email)"
+        type: boolean
+        default: false
 
 permissions:
-  contents: write      # nécessaire pour sauvegarder state/seen.json
+  contents: write
 
 concurrency:
   group: freelance-watch
@@ -28,7 +32,7 @@ jobs:
       - run: pip install -r requirements.txt
 
       - name: Run
-        run: python main.py
+        run: python main.py ${{ inputs.test && '--test' || '' }}
         env:
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
